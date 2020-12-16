@@ -62,6 +62,54 @@ class User {
       });
   }
 
+  deleteItemFromCart(productId) {
+    const updatedCart = this.cart.items.filter((item) => {
+      return item.productId.toString() != productId.toString();
+    });
+
+    const db = getDB();
+    return db
+      .collection("users")
+      .updateOne(
+        { _id: new mongoDb.ObjectId(this._id) },
+        { $set: { cart: { items: updatedCart } } }
+      );
+  }
+
+  addOrder() {
+    const db = getDB();
+    return this.getCart()
+      .then((products) => {
+        const order = {
+          items: products,
+          user: {
+            _id: new mongoDb.ObjectId(this._id),
+            name: this.name, // Its importnat to udersand here is that the email and name of the user will not change since we directly saving it through veriables
+            email: this.email, // But we can get the user by the id of the user
+          },
+        };
+        return db.collection("orders").insertOne(order);
+      })
+      .then((result) => {
+        this.cart = { items: [] };
+        return db
+          .collection("users")
+          .updateOne(
+            { _id: new mongoDb.ObjectId(this._id) },
+            { $set: { cart: { items: [] } } }
+          );
+      });
+  }
+
+  getOrders() {
+    const db = getDB();
+
+    return db
+      .collection("orders")
+      .find({ "user._id": new mongoDb.ObjectId(this._id) })
+      .toArray();
+  }
+
   save() {
     const db = getDB();
     return db
